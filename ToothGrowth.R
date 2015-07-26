@@ -31,7 +31,7 @@ g <- ggplot(data = Tooth, aes(x = dose, y = len, colour = delivery)) +
     labs(title = "Tooth length with dose") +
     ylab("Tooth length")
 
-
+g
 
 plot(Tooth$dose, Tooth$len, col = Tooth$delivery)
 
@@ -43,6 +43,7 @@ lapply(Tooth, class)
 g <- ggplot(aes(y = len, x = dose, fill = delivery), data = Tooth) + geom_boxplot()
 g <- g + labs(title = "Teeth length of Guinea Pigs when supplemented with Vitamin C")
 g <- g + labs(x = "Dose in milligrams", y = "Tooth length")
+g <- g + theme_bw()
 g
 
 #Orange Juice is better than Ascorbic Acid
@@ -72,6 +73,9 @@ t.test(filter(Tooth, dose == "1", delivery == "orange juice")$len,
 #Clearly more length, between 2.8and 9.1 units longer when supplemented with orange juice
 t.test(filter(Tooth, dose == "2", delivery == "orange juice")$len,
        filter(Tooth, dose == "2", delivery == "ascorbic acid")$len)
+t.test(filter(Tooth, dose == "2", delivery == "orange juice")$len,
+       filter(Tooth, dose == "2", delivery == "ascorbic acid")$len)$estimate[[1]]
+
 #At th highest dose of vitamin there is no difference between ascorbic acid and orange juice.
 #So that average is very smilar at 26.1 differing only in the second decimal place.
 #There is more variabiabliity in the asorbic acid takers
@@ -80,3 +84,4 @@ sd(filter(Tooth, dose == "2", delivery == "ascorbic acid")$len)
 #Now we can say with confidence that at lower doses Orange Juice performs better than
 #Ascorbic acid and roughly the same at the higher dose of 2mg. We can also say that
 #the higher the dose the more the greater the tooth length on average.
+

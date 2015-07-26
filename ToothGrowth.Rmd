@@ -1,0 +1,136 @@
+---
+title: "Vitamin C's effect on ToothGrowth"
+author: "Natalie Phillips"
+date: "26 July 2015"
+output: pdf_document
+---
+
+```{r, echo=FALSE, message=FALSE}
+library(dplyr)
+library(ggplot2)
+library(UsingR)
+```
+
+##Overview
+In the 1940's an investigation was conducted into effect of Vitamin C on the length of guinea pig teath. The following analysis of this data shows that more vitamine C promots longer teath in guinea pigs and that supplementing with Orange Juice promots greater teeth gowth over ascorbic acid for smaller sized suplements but had around the same effect when the dose got to 2mg.
+
+##Tooth growth data
+```{r echo=FALSE}
+#Load the data and provide a summary
+data("ToothGrowth")
+```
+```{r echo=FALSE, message=FALSE}
+#Breakdown of dose and supplement
+Supp <- data.frame(supp = c("OJ", "VC"), 
+                   delivery = as.factor(c("orange juice", "ascorbic acid")))
+Tooth <- left_join(ToothGrowth, Supp) %>%
+    group_by(delivery)
+Tooth$dose <- as.character(Tooth$dose)
+Tooth$dose <- as.factor(Tooth$dose)
+```
+The tooth growth data is avialable in the R datasets package. The data consistst of three variables. "Len" is the length of guinea pigs teeth at the end of the experiment. "Supp" describes which vitamin C supplement is given where orange juice is denoted as OJ and asorbic acid is denoted as VC. The final column, "dose" gives the number of milli grams given, either 0.5 mg, 1 mg or 2 mg. The guinea pig tooth lengths are summarised below:
+```{r}
+summary(ToothGrowth$len)
+```
+In the original investigation 60 guinea pigs were supplimented with either ascorbic acid or orange juice, 30 in each group. Within those groups there were 3 doses of supliment, 10 at 0.5 mg, 10 at 1 mg and 10 at 2 mg. In total this gives us 6 groups differentiated by suppliment and dose. See the table below for sample numbers.
+
+Dose | ascorbic acid | orange juice
+------------- | ------------- | -------------
+0.5 mg | 10 | 10
+1 mg | 10 | 10
+2mg | 10 | 10
+
+We can see in the graph below how the length changes as the dose changes as well as differences between the two suplements. Looking at this graph orange juice outperforms ascorbic acid in the two smaller doses and there is no clear difference between them at the higher dose.
+
+```{r echo=FALSE}
+g <- ggplot(aes(y = len, x = dose, fill = delivery), data = Tooth) + geom_boxplot()
+g <- g + labs(title = "Teeth length of Guinea Pigs when supplemented with Vitamin C")
+g <- g + labs(x = "Dose in milligrams", y = "Tooth length")
+g <- g + theme_bw()
+g
+```
+
+
+##Hypothesis tests
+Is there enough evidence to support a difference between different suppliments and different doses.
+
+###Is orange Juice a better suppliment than asorbic acid?
+First lets test to see if Orange Juice is a better suppliment than asorbic acid. Our null hypothisis is that they produce the same length teath as each other and the alternative hypothisis is that orange juice results in longer teeth. The hypothesis test was performed by the following line of code:
+```{r}
+t.test(filter(Tooth, delivery == "orange juice")$len,
+                filter(Tooth, delivery == "ascorbic acid")$len)
+```
+```{r echo=FALSE, results='hide'}
+OJvVC <- t.test(filter(Tooth, delivery == "orange juice")$len,
+                filter(Tooth, delivery == "ascorbic acid")$len)
+```
+The averge tooth length for orange juice is `r round(OJvVC$estimate[[1]],2)` and for ascorbic acid it is `r round(OJvVC$estimate[[2]],2)`. While the average tooth length is different, with these sample sizes and variance we cannot rule out the possibility that they are both as effictive as each other. Another way of looking at this test is the 95% confidence interval of the difference in tooth length between the supplements. The 95% confidence interval is `r OJvVC$conf.int`. Since this interval includes 0 we cannot rule out our null hypothisis that both supplements producte the same result.
+
+We can't clearly and catagorically say that one supplement is better than the other. Looking back to our graph it does seem that one suppliment does out perform than the other though it may depends on the dose. We will come back our suppliment comparison a little later.
+
+###Are larger doses more effective than smaller doses?
+```{r echo=FALSE, results='hold'}
+halfv1 <- t.test(filter(Tooth, dose == "1")$len, filter(Tooth, dose == "0.5")$len)
+Onev2 <- t.test(filter(Tooth, dose == "2")$len, filter(Tooth, dose == "1")$len)
+```
+As we can see from the table below we have strong evidence that the larger the dose of vitamin C the longer the tooth growth. We can confidently dismiss the null hypothises that there is no difference in tooth length with increases in dose. We can see that when dose is increased from .5 mg to 1 mg the average tooth length goes from 10.6 to 19.7 with an increase in the range of between 6.3 and 12 units. An increase in tooth length is also seen when the dose is increased from 1 mg to 2 mg with the average length increasing from 19.7 to 26.1. The 95% confidence interval puts the increased length at between 3.7 and 9. 
+
+Compare dose | Average values | 95% Confidence Interval | p Value
+------------- | ------------- | ------------- | -------------
+1 vs .5 | 1 : `r halfv1$estimate[[1]]` vs .5 : `r halfv1$estimate[[2]]` |  (`r round(halfv1$conf.int[c(1,2)],2)`) | $`r halfv1$p.value`$
+2 vs 1 | 2 : `r Onev2$estimate[[1]]` vs .5 : `r Onev2$estimate[[2]]` |  (`r round(Onev2$conf.int[c(1,2)],2)`) | $`r Onev2$p.value`$
+
+We can say with confidence that larger doses result in longer teeth.
+
+###Is orange juice a better suppliment than asorbic acid (revisited)?
+```{r echo=FALSE, results='hide'}
+OJvsVChalf <- t.test(filter(Tooth, dose == "0.5", delivery == "orange juice")$len,
+       filter(Tooth, dose == "0.5", delivery == "ascorbic acid")$len)
+OJvsVC1 <- t.test(filter(Tooth, dose == "1", delivery == "orange juice")$len,
+       filter(Tooth, dose == "1", delivery == "ascorbic acid")$len)
+OJvsVC2 <- t.test(filter(Tooth, dose == "2", delivery == "orange juice")$len,
+       filter(Tooth, dose == "2", delivery == "ascorbic acid")$len)
+```
+There is not support for orange juice being more effective than ascorbic acid across any dose however an examination of the graph suggests that for different doses we will see an advantage. The table below explores the difference in length between orange juice, OJ, and ascorbic acid, VC, supplements. The results have been generated using the same t test as before.
+
+OJ vs VC at dose | Average values | 95% Confidence Interval | p Value
+------------- | ------------- | ------------- | -------------
+.5 mg | OJ : `r OJvsVChalf$estimate[[1]]` vs VC: `r OJvsVChalf$estimate[[2]]` | (`r round(OJvsVChalf$conf.int[c(1,2)],2)`) | $`r OJvsVChalf$p.value`$
+1 mg | OJ : `r OJvsVC1$estimate[[1]]` vs VC: `r OJvsVC1$estimate[[2]]` | (`r round(OJvsVC1$conf.int[c(1,2)],2)`) | $`r OJvsVC1$p.value`$
+2 mg | OJ : `r OJvsVC2$estimate[[1]]` vs VC: `r OJvsVC2$estimate[[2]]` | (`r round(OJvsVC2$conf.int[c(1,2)],2)`) | $`r OJvsVC2$p.value`$
+
+We can see in the table that in the case of the two smaller doses, .5 mg and 1 mg, we have sufficient evidence to support our hypothesis that orange juice is  superior at increasing tooth length over asorbic acid.
+
+At a dose of 2 mg both supplements perform equally as well and produce very similar average tooth lengths.
+
+##Conclusion
+There is support for larger doses of vitamin Cbeing more effective at increasing the length of guinea pig teeth. Supplementing with orange juice has more impact on the length of teeth than ascorbic acid execept at the higest dose of 2 mg. We assume that the average teeth length follows a roughly normal distribution.
+
+
+\newpage
+
+#Appendix
+
+## Explore the data using a graph
+
+Showing code used to produce the graph:
+```{r results='hide', message=FALSE}
+library(dplyr)
+library(ggplot2)
+library(UsingR)
+#Load the data and provide a summary
+data("ToothGrowth")
+#Add the full names of the suppliments and treat the dose as a factor
+Supp <- data.frame(supp = c("OJ", "VC"), 
+                   delivery = as.factor(c("orange juice", "ascorbic acid")))
+Tooth <- left_join(ToothGrowth, Supp) %>%
+    group_by(delivery)
+Tooth$dose <- as.character(Tooth$dose)
+Tooth$dose <- as.factor(Tooth$dose)
+
+#Construct the box plot showing the two supplements seperately
+g <- ggplot(aes(y = len, x = dose, fill = delivery), data = Tooth) + geom_boxplot()
+g <- g + labs(title = "Teeth length of Guinea Pigs when supplemented with Vitamin C")
+g <- g + labs(x = "Dose in milligrams", y = "Tooth length")
+g <- g + theme_bw()
+```
