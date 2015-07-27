@@ -1,18 +1,21 @@
 ---
 title: "Using simulation to show exponentional distribution paramaters"
-author: "Natalie"
+author: "Natalie Phillips"
 date: "24 July 2015"
 output: pdf_document
 ---
 
 #Overview
-In this paper we are investigating samples and their ability to estimate population paramaters such as mean. We are going to use the exponential distribution. The exponential distribution describes the probability distribution of the time between events in a Poisson process. For example the exponential distribution may be used to describe the time between people arriving at a bus stop. We are going to show that averages of samples from this distribution fall in a roughly normal distrubution centered at the population mean. We will show that averages most often fall near the true population mean and less often fall further away from the true population mean.
+In this paper we are investigating samples and their ability to estimate population paramaters such as the mean. We are going to use the exponential distribution for our simulations. The exponential distribution describes the probability distribution of the time between events in a Poisson process. For example the exponential distribution may be used to describe the time between people arriving at a bus stop. We are going to show that averages of samples from this distribution are roughly normal distributed and centered at the population mean.
 
 #Simulations
-The exponential distribution follows the formula,  $f(x; \lambda) = \lambda \exp^{-\lambda x}$ for $x \ge 0$ where $\lambda$ is the rate of occurances per unit time. The mean of the exponential distribution, which is also the average time between events, has the formula $\mu = 1/\lambda$. We want to see that mean of random samples from this distribution fall in a mound shape around the population mean. We want to look at the distribution of sample means from the exponential distribution.
 
-In our experiment $\lambda = 0.2$. A rate of 0.2 tell us that there are an average of .2 events in each period. The average time between events is $5$. Each sample in this experiment is 40 values randomly generated from the exponential distribution. Here are 40 samples using the R command for random expondentials ```rexp```
-```{r, echo=FALSE}
+###One sample of 40 iid values
+
+The exponential distribution follows the formula,  $f(x; \lambda) = \lambda \exp^{-\lambda x}$ for $x \ge 0$ where $\lambda$ is the rate of occurances per unit time. The mean of the exponential distribution, which is also the average time between events, has the formula $\mu = 1/\lambda$. We want to show that distribution of means of random samples from the exponential distribution in a mound shape around the population mean. We will demonstrate that the distribution of sample means is roughly the exponential distribution.
+
+In our experiment $\lambda = 0.2$. A rate of 0.2 tell us that there are an average of .2 events in each period. The average time between events is $5$. Each sample contains 40 values randomly drawn from the exponential distribution. Here is one sample of 40 independent and identically distributed, iid, values generated using the R command for random expondentials ```rexp```
+```{r, echo=FALSE, message=FALSE}
 library(ggplot2)
 require(gridExtra)
 ```
@@ -23,12 +26,62 @@ set.seed(12)
 sample <- rexp(sampleSize, rate = lambda)
 samplemean <- mean(sample)
 ```
-Here are the first few values of our 40 sampled values:
-```{r, echo=FALSE}
-cat(head(sample, 3), sep = ", ")
-```
-The average of these 40 values is `r samplemean`.
+Here are the first few of our 40 sampled values `r head(sample, 3)`. The average of these 40 values is `r samplemean` compared to a true population mean of 5. A histogram of this random sample plotted against the exponential distribution showing both the sample mean and the population mean appears in Apendix 1.
 
+### 1,000 samples of 40 values
+
+The following simulation takes 1,000 samples like the one above and uses them to generate 1,000 sample means. We are primarily interested in the distribution of these sample means. The following code performs this task. The averages, or means, of all these 1,000 samples is saved in the variable called $mns$. We also collect the sample variance in $vrs$.
+```{r}
+mns = NULL  #initialise variable for means
+vrs = NULL
+for (i in 1 : 1000) {
+    expdist <- rexp(sampleSize, rate = lambda)
+    mns = c(mns, mean(expdist))
+    vrs = c(vrs, var(expdist))
+}
+avgAllMeans <- mean(mns) #Average of all 1000 sample means
+sdMean <- 1/(sqrt(40) * lambda)  #Standard error of sample means
+```
+
+##Sample Mean versus Theoretical Mean
+The average of the 1,000 sample means is `r avgAllMeans` while the theoretical average, $1 / \lambda$, is `r 1 / lambda`. While the first sample didn't give us a very good approximation to the mean of the exponential distribution once we have taken many such samples and take their average we get closer and closer to the true mean. We know the distribution of sample averages gets closer and closer to a normal distribution by the central limit theroem. We can see from the graph below that the distribution of sample means does indead look close to a normal distribution. The sample mean distribution looks symetric and centred around the population mean. The normal distribution with $\mu = 5$ and $sd = \sigma / \sqrt{40}$ is drawn on the graph for comparison. The normal distribution and the distribution of averages resemble each other closely.
+```{r echo=FALSE}
+mns <- data.frame(mns)
+g <- ggplot(data = mns, aes(x = mns)) + geom_histogram(alpha = .20, binwidth = .2, colour = "black", aes(y = ..density..))
+g <- g + stat_function(fun = dnorm, arg = list(mean = 1/lambda, sd = sdMean), size = 1.2)
+g <- g + geom_vline(xintercept = avgAllMeans, colour = "grey50", size = 1.2)
+g <- g + geom_vline(xintercept = 1/lambda, size = 1.2)
+g <- g + labs(title = "1,000 sample means plotted against a normal distribution")
+g <- g + labs(x = "Sample means")
+g <- g + theme_bw()
+g
+```
+
+###Confidence Intervals
+
+It is by appling the central limit theorem and understanding that the distribution of the means tends to a normal distribution that we are able to produce confidence intervals for the population mean from large samples. Assuming a normal distribution our formula for a 95% confidence interval for $\mu$ is
+$$ \bar{X} \pm Z(.975) \times \sigma / \sqrt{n} $$
+where Z is a normal distribution with $\mu = 0$ and $\sigma = 1$. This population average $\bar{X}$ is taken over $40 \times 1000$ values. This gives us a sample population of 40,000. Plugging into the formula above give us a confidence interval of `r round(avgAllMeans + c(-1, 1) * qnorm(.975) * 5/ sqrt(40000), 2)`.  This confidence interval has the interpretation that if we took 100 samples of 40,000 each that the true population mean would lie with the confidence range generated about 95 times out of 100 and outside the range around 5 times out of 100.
+
+
+##Sample Variance versus Theoretical Variance
+We don't know the actual distribution of the sample mean variance but we do know that as the number of samples tends to infinity the average sample mean variance will tend to the true theoritical sample mean variance of $\sigma^2/n$. The standard error can be found by taking the square root of the sample mean variance. The standard error can be easier to work with as it is in the same units as the original distribution and is less skewed. A histogram of standard errors estimated from 1,000 samples can be seen in Appendix 2. This graph is a little more skewed than we saw with the sample means however it is still mound shape and it's average is near the expected standard error.
+```{r}
+stderror <- sqrt(vrs/40)
+se <- 5/sqrt(40)
+avese <- mean(stderror)
+```
+From the code above we know the average standard error from 1,000 samples is `r avese` and the true standard error for sample size 40 is `r se`. Our estimated variance is a little smaller than the true standard error. Both the estimaged standard error and true standard error appear on the graph as grey and black lines respectively.
+
+#Distribution
+
+We can conclude from this analysis that that the distribution of sample means is roughly normally distributed as the sample size gets large. The sample means takes on the right shape for a normal distribution which is symmetric about the mean and bell or mound shaped. The standard error is not as close to normally distributed though it is centred about the true standard error in a mound. If the standard error is not know and the sample size is small a t distribution may be more appropriate for finding confidence intervals than a normal distribution. The t distribution has fatter tails and produces a wider confidence interval which take into account our greater level of uncertainty.
+
+\newpage
+
+#Appendix
+
+##Appendix 1: 40 iid values drawn from the exponential distribution
 
 ```{r, echo=FALSE}
 sample <- data.frame(sample)
@@ -44,34 +97,9 @@ g
 ```
 
 
-The sample mean, shown on the graph in grey, is an estimate of the distribution mean of 5 however we know if we took another 40 samples from the exponential distribution we would get a different sample mean. We are going to do exactly that. We are going to repeat this experement with 40 samples 1,000 times. Take the means from each of those samples of 40 and plot the resultant 1,000 means on a graph to see where they lie. 
+The sample mean, shown on the graph in grey, is an estimate of the distribution mean of 5 however we know if we took another 40 samples from the exponential distribution we would get a different sample mean.
 
-The following code takes 1,000 samples of 40 random values from the expondential. The average, or mean, of all these 1,000 samples is saved in a variable called $mns$.
-```{r}
-mns = NULL  #initialise variable for means
-vrs = NULL
-for (i in 1 : 1000) {
-    expdist <- rexp(sampleSize, rate = lambda)
-    mns = c(mns, mean(expdist))
-    vrs = c(vrs, var(expdist))
-}
-avgAllMeans <- mean(mns)
-mns <- data.frame(mns)
-sdMean <- 1/(sqrt(40) * lambda)
-g <- ggplot(data = mns, aes(x = mns)) + geom_histogram(alpha = .20, binwidth = .2, colour = "black", aes(y = ..density..))
-g <- g + stat_function(fun = dnorm, arg = list(mean = 1/lambda, sd = sdMean), size = 1.2)
-g <- g + geom_vline(xintercept = avgAllMeans, colour = "grey50", size = 1.2)
-g <- g + geom_vline(xintercept = 1/lambda, size = 1.2)
-g
-```
-
-##Sample Mean versus Theoretical Mean
-The average of the 1,000 sample means is `r avgAllMeans` while the theoretical average, $1 / \lambda$, is `r 1 / lambda`. While the first sample didn't give us a very good approximation to the mean of the exponential distribution once we have taken many such samples and take their average we get closer and closer to the true mean. This is due to the law of large numbers, the larger the sample the closer to the true mean we get. We know the distribution of sample averages gets closer and closer to a normal distribution by the central limit theroem. It is by appling the central limit theorem that we are able to produce confidence intervals for large samples as we understand something about the distribution of the sample mean.
-
-##Sample Variance versus Theoretical Variance
-Notice the distribution of sample averages appears to be broadly similar to the normal distribution. This is what the central limit theorem tells us, as the number of samples approches infinity the distrubution of the averages approaches a normal distribution. As you can see a normal distibution with mean $1 / \lambda$ and standard error $1/ (\sqrt{40}\lambda)$ has been overlayed over our graph of sample means.
-
-The variance of the distribution of sample means is equal to variance of the underlying distribution, $\sigma^2$, divided by the size of the sample. In other words the standard error is $\sigma /\sqrt{n}$. We can demonstrate this rule by comparing  the variation from the samples with the expected variation. It is easier to complare the standard error which is related to the variation so variation equals the square of the standard error. The standard error has the benetif of being in the same units as the original variable with less skew.
+##Appendix 2: histogram of sample errors estimaged from 1,000 samples
 
 ```{r}
 stderror <- sqrt(vrs/40)
@@ -88,6 +116,4 @@ g <- g + theme_bw()
 g
 ```
 
-The standard error, calculated using the variance from the samples of 40 iid draws from the exponential distribution, does not look as symetrical as the means of the samples. However when we take the average of all the standard error approximations we get `r avese` which is close to the theoretical standard error of `r se`. If we were to take more and samples the average of the estimated standard errors would get closer to the mean. Alternatively if we took larger samples we would also get a better estimate of the sample mean and hence the variance.
-
-It is interesting to think about the variance of 
+The standard error, which was calculated using the variance from the samples of 40 iid draws from the exponential distribution, does not look as symetrical as the means of the samples. However when we take the average of all the standard error approximations we get `r avese` which is close to the theoretical standard error of `r se`. If we were to take more and samples the average of the estimated standard errors would get closer to the mean. Alternatively if we took larger samples we would also get a better estimate of the sample mean and hence the variance.
